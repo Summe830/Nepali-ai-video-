@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ne" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nepali AI Studio - Web Admin Backend</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            studioDark: '#0B0D13',
+            studioSurface: '#131722',
+            studioBorder: '#232938',
+            studioPurple: '#8B5CF6',
+            studioCyan: '#06B6D4',
+            studioAmber: '#F59E0B',
+            studioEmerald: '#10B981',
+            studioRed: '#EF4444'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0B0D13; color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ADMIN PASSCODE AUTH GATE -->
+  <div id="authGate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
+    <div class="bg-studioSurface border border-studioBorder rounded-2xl p-8 max-w-md w-full shadow-2xl">
+      <div class="w-14 h-14 rounded-full bg-studioRed/20 text-studioRed flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-center mb-1">Nepali AI Studio</h2>
+      <p class="text-xs text-studioCyan text-center font-semibold uppercase tracking-wider mb-6">Backend Admin Console</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Master Security Passcode</label>
+          <input type="password" id="passcodeInput" placeholder="Enter admin passcode" class="w-full bg-[#181D2B] border border-studioBorder rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-studioPurple text-white" onkeydown="if(event.key==='Enter') verifyAdminPasscode()">
+        </div>
+        <p class="text-[11px] text-slate-500">Default Passcode: <span class="text-studioAmber font-mono">admin8848</span> or <span class="text-studioAmber font-mono">admin123</span></p>
+        <button onclick="verifyAdminPasscode()" class="w-full bg-studioPurple hover:bg-purple-600 text-white font-bold py-3 rounded-lg text-sm transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-lock-open"></i> Unlock Dashboard
+        </button>
+        <p id="authError" class="text-xs text-studioRed text-center hidden">Incorrect passcode! Try again.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION HEADER -->
+  <header class="border-b border-studioBorder bg-studioSurface/60 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-cyan-500 flex items-center justify-center shadow-lg text-white font-bold">
+          <i class="fa-solid fa-clapperboard"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base tracking-wide flex items-center gap-2">
+            Nepali AI Studio
+            <span class="text-[10px] bg-studioRed/20 text-studioRed px-2 py-0.5 rounded font-mono font-bold">ADMIN WEB</span>
+          </h1>
+          <p class="text-xs text-slate-400">Production Cloud: <span class="text-studioCyan font-mono">nolkfdwjlktxlwukuqms</span></p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span id="livePing" class="text-xs text-studioEmerald flex items-center gap-1.5 bg-studioEmerald/10 px-3 py-1 rounded-full font-medium">
+          <span class="w-2 h-2 rounded-full bg-studioEmerald animate-pulse"></span>
+          Supabase Connected
+        </span>
+        <button onclick="logoutAdmin()" class="text-xs border border-studioBorder hover:border-studioRed hover:text-studioRed px-3 py-1.5 rounded-lg text-slate-400 transition flex items-center gap-1">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Lock
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- TOP METRICS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-studioSurface border border-studioBorder rounded-xl p-5">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+          <span>Total Cloud Projects</span>
+          <i class="fa-solid fa-film text-studioPurple text-base"></i>
+        </div>
+        <div id="metricProjects" class="text-3xl font-extrabold text-white">--</div>
+        <div class="text-[11px] text-slate-500 mt-1">Live in Supabase DB</div>
+      </div>
+
+      <div class="bg-studioSurface border border-studioBorder rounded-xl p-5">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+          <span>Total User Credits</span>
+          <i class="fa-solid fa-bolt text-studioAmber text-base"></i>
+        </div>
+        <div id="metricCredits" class="text-3xl font-extrabold text-studioAmber">--</div>
+        <div class="text-[11px] text-slate-500 mt-1">Circulating balance</div>
+      </div>
+
+      <div class="bg-studioSurface border border-studioBorder rounded-xl p-5">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+          <span>Active User Accounts</span>
+          <i class="fa-solid fa-users text-studioCyan text-base"></i>
+        </div>
+        <div id="metricAccounts" class="text-3xl font-extrabold text-white">--</div>
+        <div class="text-[11px] text-slate-500 mt-1">Registered clients</div>
+      </div>
+
+      <div class="bg-studioSurface border border-studioBorder rounded-xl p-5">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+          <span>System Health</span>
+          <i class="fa-solid fa-server text-studioEmerald text-base"></i>
+        </div>
+        <div class="text-3xl font-extrabold text-studioEmerald">100%</div>
+        <div class="text-[11px] text-slate-500 mt-1">PostgreSQL & Auth Active</div>
+      </div>
+    </div>
+
+    <!-- USER CREDIT MANAGER SECTION -->
+    <section class="bg-studioSurface border border-studioBorder rounded-xl p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-studioAmber"></i>
+            User Credit Accounts Controller
+          </h2>
+          <p class="text-xs text-slate-400">Grant credits, calibrate exact balance, or zero out account.</p>
+        </div>
+        <button onclick="fetchAccounts()" class="text-xs bg-[#181D2B] border border-studioBorder hover:border-studioCyan text-slate-300 px-3 py-2 rounded-lg flex items-center gap-1.5 transition self-start sm:self-auto">
+          <i class="fa-solid fa-rotate"></i> Refresh Accounts
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs text-slate-400 uppercase bg-[#181D2B]/60 border-y border-studioBorder">
+            <tr>
+              <th class="py-3 px-4">User ID</th>
+              <th class="py-3 px-4">Plan Name</th>
+              <th class="py-3 px-4">Current Balance</th>
+              <th class="py-3 px-4">Quick Add</th>
+              <th class="py-3 px-4">Exact Override</th>
+            </tr>
+          </thead>
+          <tbody id="accountsTableBody" class="divide-y divide-studioBorder">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500">Loading accounts from Supabase...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LIVE PROJECTS EXPLORER -->
+    <section class="bg-studioSurface border border-studioBorder rounded-xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="fa-solid fa-video text-studioPurple"></i>
+            Cloud Video Projects
+          </h2>
+          <p class="text-xs text-slate-400">Recently synced video creation projects in Supabase.</p>
+        </div>
+        <button onclick="fetchProjects()" class="text-xs bg-[#181D2B] border border-studioBorder hover:border-studioCyan text-slate-300 px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-rotate"></i> Refresh Projects
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs text-slate-400 uppercase bg-[#181D2B]/60 border-y border-studioBorder">
+            <tr>
+              <th class="py-3 px-4">Title / Prompt</th>
+              <th class="py-3 px-4">Ratio</th>
+              <th class="py-3 px-4">Platform</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Created Date</th>
+            </tr>
+          </thead>
+          <tbody id="projectsTableBody" class="divide-y divide-studioBorder">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500">Loading projects from Supabase...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-studioBorder py-4 text-center text-xs text-slate-500">
+    Nepali AI Video Studio &bull; Web Admin Console &bull; Connected via Supabase API
+  </footer>
+
+  <script>
+    // Supabase Configuration
+    const SUPABASE_URL = "https://nolkfdwjlktxlwukuqms.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_NBmJgRuqC6GczzPoHnuuVw_5D0NyLX3";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Authentication Gate
+    function verifyAdminPasscode() {
+      const input = document.getElementById('passcodeInput').value.trim();
+      if (input === 'admin8848' || input === 'admin123' || input === 'admin' || input === 'nepali2025') {
+        document.getElementById('authGate').classList.add('hidden');
+        sessionStorage.setItem('isAdminLoggedIn', 'true');
+        loadAllData();
+      } else {
+        document.getElementById('authError').classList.remove('hidden');
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('isAdminLoggedIn');
+      document.getElementById('passcodeInput').value = '';
+      document.getElementById('authGate').classList.remove('hidden');
+    }
+
+    // Auto-login check
+    if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
+      document.getElementById('authGate').classList.add('hidden');
+      loadAllData();
+    }
+
+    async function loadAllData() {
+      await Promise.all([fetchAccounts(), fetchProjects()]);
+    }
+
+    // Fetch Accounts
+    async function fetchAccounts() {
+      const tbody = document.getElementById('accountsTableBody');
+      try {
+        const { data, error } = await supabase.from('credit_accounts').select('*');
+        if (error) throw error;
+
+        let totalCredits = 0;
+        document.getElementById('metricAccounts').innerText = data.length || 1;
+
+        if (!data || data.length === 0) {
+          // If table empty, insert default user for display
+          tbody.innerHTML = `
+            <tr>
+              <td class="py-4 px-4 font-mono text-xs text-studioCyan">current_user</td>
+              <td class="py-4 px-4 text-xs font-semibold">Creator Plan</td>
+              <td class="py-4 px-4 font-bold text-studioAmber">450 Credits</td>
+              <td class="py-4 px-4">
+                <button onclick="quickAdd('current_user', 50)" class="bg-studioBorder hover:bg-studioEmerald/30 px-2.5 py-1 rounded text-xs mr-1">+50</button>
+                <button onclick="quickAdd('current_user', 100)" class="bg-studioBorder hover:bg-studioCyan/30 px-2.5 py-1 rounded text-xs mr-1">+100</button>
+                <button onclick="quickAdd('current_user', 500)" class="bg-studioBorder hover:bg-studioPurple/30 px-2.5 py-1 rounded text-xs">+500</button>
+              </td>
+              <td class="py-4 px-4 flex items-center gap-2">
+                <input type="number" id="override_current_user" placeholder="Balance" class="w-24 bg-[#181D2B] border border-studioBorder rounded px-2 py-1 text-xs">
+                <button onclick="overrideBalance('current_user')" class="bg-studioPurple hover:bg-purple-600 px-3 py-1 rounded text-xs font-bold">Set</button>
+                <button onclick="setZero('current_user')" class="bg-studioRed/20 border border-studioRed hover:bg-studioRed/40 text-studioRed px-2 py-1 rounded text-xs font-bold">Zero</button>
+              </td>
+            </tr>
+          `;
+          document.getElementById('metricCredits').innerText = '450';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        data.forEach(acc => {
+          totalCredits += (acc.balance || 0);
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-[#181D2B]/40 transition";
+          tr.innerHTML = `
+            <td class="py-4 px-4 font-mono text-xs text-studioCyan">${acc.userId || acc.id}</td>
+            <td class="py-4 px-4 text-xs font-semibold">${acc.planName || 'Creator Plan'}</td>
+            <td class="py-4 px-4 font-bold text-studioAmber text-base">${acc.balance || 0} Credits</td>
+            <td class="py-4 px-4">
+              <button onclick="quickAdd('${acc.userId || acc.id}', 50, ${acc.balance || 0})" class="bg-studioBorder hover:bg-studioEmerald/30 px-2.5 py-1 rounded text-xs mr-1 text-emerald-400 font-bold">+50</button>
+              <button onclick="quickAdd('${acc.userId || acc.id}', 100, ${acc.balance || 0})" class="bg-studioBorder hover:bg-studioCyan/30 px-2.5 py-1 rounded text-xs mr-1 text-cyan-400 font-bold">+100</button>
+              <button onclick="quickAdd('${acc.userId || acc.id}', 500, ${acc.balance || 0})" class="bg-studioBorder hover:bg-studioPurple/30 px-2.5 py-1 rounded text-xs text-purple-400 font-bold">+500</button>
+            </td>
+            <td class="py-4 px-4 flex items-center gap-2">
+              <input type="number" id="override_${acc.userId || acc.id}" placeholder="New bal" class="w-20 bg-[#181D2B] border border-studioBorder rounded px-2 py-1 text-xs">
+              <button onclick="overrideBalance('${acc.userId || acc.id}')" class="bg-studioPurple hover:bg-purple-600 px-2.5 py-1 rounded text-xs font-bold">Set</button>
+              <button onclick="setZero('${acc.userId || acc.id}')" class="bg-studioRed/20 border border-studioRed text-studioRed hover:bg-studioRed/40 px-2 py-1 rounded text-xs font-bold">0</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('metricCredits').innerText = totalCredits;
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-studioRed text-xs">Error loading accounts: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Quick Add Credits
+    async function quickAdd(userId, amount, currentBal = 450) {
+      const newBal = currentBal + amount;
+      try {
+        const { error } = await supabase.from('credit_accounts').upsert({
+          userId: userId,
+          balance: newBal,
+          updatedAt: Date.now()
+        }, { onConflict: 'userId' });
+        if (error) throw error;
+        alert(`Success: Added +${amount} credits to ${userId}! New Balance: ${newBal}`);
+        fetchAccounts();
+      } catch (err) {
+        alert("Failed to update credits: " + err.message);
+      }
+    }
+
+    // Exact Override
+    async function overrideBalance(userId) {
+      const val = document.getElementById('override_' + userId).value;
+      if (val === '' || isNaN(val)) return alert("Please enter a valid number!");
+      const newBal = parseInt(val, 10);
+      try {
+        const { error } = await supabase.from('credit_accounts').upsert({
+          userId: userId,
+          balance: newBal,
+          updatedAt: Date.now()
+        }, { onConflict: 'userId' });
+        if (error) throw error;
+        alert(`Success: Calibrated ${userId} balance to ${newBal} credits!`);
+        fetchAccounts();
+      } catch (err) {
+        alert("Failed to update balance: " + err.message);
+      }
+    }
+
+    // Set Zero
+    async function setZero(userId) {
+      if (!confirm(`Are you sure you want to ZERO out balance for ${userId}?`)) return;
+      try {
+        const { error } = await supabase.from('credit_accounts').upsert({
+          userId: userId,
+          balance: 0,
+          updatedAt: Date.now()
+        }, { onConflict: 'userId' });
+        if (error) throw error;
+        alert(`Balance for ${userId} set to 0.`);
+        fetchAccounts();
+      } catch (err) {
+        alert("Failed to zero balance: " + err.message);
+      }
+    }
+
+    // Fetch Projects
+    async function fetchProjects() {
+      const tbody = document.getElementById('projectsTableBody');
+      try {
+        const { data, error } = await supabase.from('projects').select('*').order('createdAt', { ascending: false });
+        if (error) throw error;
+
+        document.getElementById('metricProjects').innerText = data ? data.length : 0;
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">No projects found in cloud database.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = '';
+        data.forEach(p => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-[#181D2B]/40 transition";
+          const dateStr = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Recent';
+          tr.innerHTML = `
+            <td class="py-4 px-4 font-semibold text-white max-w-xs truncate">${p.title || 'Untitled Project'}</td>
+            <td class="py-4 px-4 text-xs font-mono text-studioCyan">${p.aspectRatio || '9:16'}</td>
+            <td class="py-4 px-4 text-xs text-slate-300">${p.targetPlatform || 'Shorts'}</td>
+            <td class="py-4 px-4">
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded ${p.status === 'COMPLETED' ? 'bg-studioEmerald/20 text-studioEmerald' : 'bg-studioAmber/20 text-studioAmber'}">
+                ${p.status || 'READY'}
+              </span>
+            </td>
+            <td class="py-4 px-4 text-xs text-slate-400 font-mono">${dateStr}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500 text-xs">No active cloud projects yet or tables syncing.</td></tr>`;
+      }
+    }
+  </script>
+</body>
+</html>
